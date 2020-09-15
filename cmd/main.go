@@ -1,55 +1,51 @@
 package main
 
 import (
-	"github.com/A-ndrey/raspi-manage-bot/camera"
+	"context"
+	"github.com/A-ndrey/raspi-manage-bot/bot"
 	"github.com/A-ndrey/raspi-manage-bot/configs"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/A-ndrey/raspi-manage-bot/db"
 	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 )
 
 func main() {
+	log.Println("Start application")
+	defer log.Println("Shutdown application")
+
 	config := configs.LoadConfig()
 
-	bot, err := tgbotapi.NewBotAPI(config.Token)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	bot.Debug = config.IsDebug
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	updatesChan, err := bot.GetUpdatesChan(config.Update)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	for update := range updatesChan {
-		if update.Message == nil {
-			continue
-		}
-
-		if update.Message.Command() == "photo" {
-			handlePhotoCommand(bot, update.Message.Chat.ID)
-		}
-	}
-}
-
-func handlePhotoCommand(bot *tgbotapi.BotAPI, chatID int64) {
-	photo, err := camera.TakePhoto()
-	if err != nil {
+	if err := db.Init(); err != nil {
 		log.Println(err)
 		return
 	}
+	defer db.Close()
 
-	fileBytes := tgbotapi.FileBytes{
-		Name:  "raspi_photo",
-		Bytes: photo,
-	}
+	ctx, cancelFunc := context.WithCancel(context.Background())
 
-	photoMessage := tgbotapi.NewPhotoUpload(chatID, fileBytes)
-	_, err = bot.Send(photoMessage)
-	if err != nil {
-		log.Println(err)
-	}
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := bot.Start(ctx, config)
+		if err != nil {
+			log.Println(err)
+			cancelFunc()
+		}
+	}()
+
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		cancelFunc()
+	}()
+
+	wg.Wait()
 }

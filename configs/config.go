@@ -12,16 +12,16 @@ const (
 )
 
 type Config struct {
-	Token   string
-	IsDebug bool
-	Update  tgbotapi.UpdateConfig
+	Token string
+	Auth  struct {
+		Code string
+	}
+	Debug  bool
+	Update tgbotapi.UpdateConfig
 }
 
 func LoadConfig() (config Config) {
-	config = Config{
-		Token:   "",
-		IsDebug: true,
-	}
+	config = Config{Debug: true}
 
 	fileBytes, err := ioutil.ReadFile(configFileName)
 	if err != nil {
