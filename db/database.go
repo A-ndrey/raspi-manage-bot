@@ -135,5 +135,5 @@ func (m Measurement) String() string {
 		return ""
 	}
 
-	return fmt.Sprintf("%s: %v %s", m.Unit, m.Value, m.MeasureUnit)
+	return fmt.Sprintf("%s: %.1f %s", m.Unit, m.Value, m.MeasureUnit)
 }
