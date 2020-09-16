@@ -6,7 +6,7 @@ import (
 	"os/exec"
 )
 
-func Restart() error {
+func Reboot() error {
 	cmd := exec.Command("/bin/bash", "-c", "sudo reboot")
 	var bts bytes.Buffer
 	cmd.Stderr = &bts

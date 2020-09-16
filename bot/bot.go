@@ -53,6 +53,25 @@ func handleUpdate(bot *tgbotapi.BotAPI, update tgbotapi.Update, config configs.C
 		if isAuthorized(bot, chatID, db.ROLE_OWNER) {
 			handleRebootCommand(bot, chatID)
 		}
+	case "internal_temp":
+		if isAuthorized(bot, chatID, db.ROLE_OWNER) || isAuthorized(bot, chatID, db.ROLE_GUEST) {
+			handleInternalTempCommand(bot, chatID)
+		}
+	}
+}
+
+func handleInternalTempCommand(bot *tgbotapi.BotAPI, chatID int64) {
+	temp := board.GetTemperature()
+	var msg tgbotapi.MessageConfig
+	if temp == "" {
+		msg = tgbotapi.NewMessage(chatID, "No data about internal temperature")
+	} else {
+		msg = tgbotapi.NewMessage(chatID, temp)
+	}
+
+	_, err := bot.Send(msg)
+	if err != nil {
+		log.Println(err)
 	}
 }
 
@@ -64,7 +83,7 @@ func handleRebootCommand(bot *tgbotapi.BotAPI, chatID int64) {
 		return
 	}
 
-	err = board.Restart()
+	err = board.Reboot()
 	if err != nil {
 		log.Println(err)
 	}
@@ -110,7 +129,7 @@ func handleAuthCommand(bot *tgbotapi.BotAPI, chatID int64, code string, config c
 }
 
 func isAuthorized(bot *tgbotapi.BotAPI, chatID int64, requiredRole string) bool {
-	role := db.GetRole(chatID)
+	role := db.GetRoleByChatID(chatID)
 	if role == requiredRole {
 		return true
 	}

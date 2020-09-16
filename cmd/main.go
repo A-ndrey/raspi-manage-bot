@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/A-ndrey/raspi-manage-bot/board"
 	"github.com/A-ndrey/raspi-manage-bot/bot"
 	"github.com/A-ndrey/raspi-manage-bot/configs"
 	"github.com/A-ndrey/raspi-manage-bot/db"
@@ -27,6 +28,12 @@ func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		board.StartMeasuring(ctx)
+	}()
 
 	wg.Add(1)
 	go func() {
