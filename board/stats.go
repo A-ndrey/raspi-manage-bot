@@ -58,14 +58,14 @@ func StartMeasuring(ctx context.Context) {
 func GetTemperature() string {
 	var result []string
 
-	cpuMeasurement, err := db.GetLastMeasurementByUnit(CPU_UNIT)
+	cpuMeasurement, err := getCPUTemp()
 	if err != nil {
 		log.Println(err)
 	} else {
 		result = append(result, cpuMeasurement.String())
 	}
 
-	gpuMeasurement, err := db.GetLastMeasurementByUnit(GPU_UNIT)
+	gpuMeasurement, err := getGPUTemp()
 	if err != nil {
 		log.Println(err)
 	} else {
