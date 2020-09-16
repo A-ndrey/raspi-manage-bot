@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"github.com/A-ndrey/raspi-manage-bot/board"
 	"github.com/A-ndrey/raspi-manage-bot/camera"
 	"github.com/A-ndrey/raspi-manage-bot/configs"
 	"github.com/A-ndrey/raspi-manage-bot/db"
@@ -42,12 +43,30 @@ func handleUpdate(bot *tgbotapi.BotAPI, update tgbotapi.Update, config configs.C
 	chatID := update.Message.Chat.ID
 
 	switch update.Message.Command() {
+	case "auth":
+		handleAuthCommand(bot, chatID, update.Message.CommandArguments(), config)
 	case "photo":
 		if isAuthorized(bot, chatID, db.ROLE_OWNER) {
 			handlePhotoCommand(bot, chatID)
 		}
-	case "auth":
-		handleAuthCommand(bot, chatID, update.Message.CommandArguments(), config)
+	case "reboot":
+		if isAuthorized(bot, chatID, db.ROLE_OWNER) {
+			handleRebootCommand(bot, chatID)
+		}
+	}
+}
+
+func handleRebootCommand(bot *tgbotapi.BotAPI, chatID int64) {
+	msg := tgbotapi.NewMessage(chatID, "Rebooting board...")
+	_, err := bot.Send(msg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	err = board.Restart()
+	if err != nil {
+		log.Println(err)
 	}
 }
 
