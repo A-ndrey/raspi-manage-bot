@@ -117,17 +117,25 @@ func InsertMeasurement(measurement Measurement) error {
 	return nil
 }
 
-func GetLastMeasurementByUnit(unit string) (Measurement, error) {
-	row := dbase.QueryRow(
-		"select unit, value, measure_unit, timestamp from stats where unit=$1 order by id desc limit 1", unit,
-	)
-	measurement := Measurement{}
-	err := row.Scan(&measurement.Unit, &measurement.Value, &measurement.MeasureUnit, &measurement.Timestamp)
+func GetOwners() ([]int64, error) {
+	rows, err := dbase.Query("select chat_id from auth where role = $1 and valid_until >= $2", ROLE_OWNER, time.Now())
 	if err != nil {
-		return Measurement{}, err
+		return nil, fmt.Errorf("can't select owners: %w", err)
+	}
+	defer rows.Close()
+
+	var result []int64
+	for rows.Next() {
+		var chatID int64
+		err = rows.Scan(&chatID)
+		if err != nil {
+			continue
+		}
+
+		result = append(result, chatID)
 	}
 
-	return measurement, nil
+	return result, err
 }
 
 func (m Measurement) String() string {
