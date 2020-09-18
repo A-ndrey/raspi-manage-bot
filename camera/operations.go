@@ -31,7 +31,7 @@ func TakeVideo(duration time.Duration) ([]byte, error) {
 	const filenameMPEG4 = "/tmp/vid.mp4"
 	timing := strconv.FormatInt(duration.Milliseconds(), 10)
 
-	cmd := exec.Command("raspivid", "-t", timing, "-b", "5000000", "-h", "600", "-w", "800", "-o", filenameH264)
+	cmd := exec.Command("raspivid", "-t", timing, "-b", "1000000", "-fps", "25", "-h", "600", "-w", "800", "-o", filenameH264)
 
 	var btsErr bytes.Buffer
 
