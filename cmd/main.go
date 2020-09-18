@@ -29,16 +29,18 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	monitoring := make(chan db.Measurement, 5)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		board.StartMeasuring(ctx)
+		board.StartMeasuring(ctx, config, monitoring)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := bot.Start(ctx, config)
+		err := bot.Start(ctx, config, monitoring)
 		if err != nil {
 			log.Println(err)
 			cancelFunc()

@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"github.com/A-ndrey/raspi-manage-bot/db"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -16,8 +17,9 @@ type Config struct {
 	Auth  struct {
 		Code string
 	}
-	Debug  bool
-	Update tgbotapi.UpdateConfig
+	Debug      bool
+	Update     tgbotapi.UpdateConfig
+	Monitoring []db.Measurement
 }
 
 func LoadConfig() (config Config) {

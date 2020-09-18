@@ -1,16 +1,11 @@
 package board
 
 import (
-	"bytes"
 	"context"
-	"fmt"
+	"github.com/A-ndrey/raspi-manage-bot/configs"
 	"github.com/A-ndrey/raspi-manage-bot/db"
-	"io/ioutil"
 	"log"
-	"os/exec"
 	"regexp"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -25,100 +20,45 @@ const (
 
 var gpuRegexp = regexp.MustCompile(`temp=(\d+\.\d+)'(.+)`)
 
-func StartMeasuring(ctx context.Context) {
+func StartMeasuring(ctx context.Context, config configs.Config, monitoring chan<- db.Measurement) {
 	log.Println("Start board measuring")
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(measuringPeriod):
-			gpuMeasurement, err := getGPUTemp()
-			if err != nil {
+			var measurements []db.Measurement
+
+			if gpuMeasurement, err := GetGPUTemp(); err != nil {
 				log.Println(err)
 			} else {
-				err = db.InsertMeasurement(gpuMeasurement)
-				if err != nil {
-					log.Println(err)
-				}
+				measurements = append(measurements, gpuMeasurement)
 			}
 
-			cpuMeasurement, err := getCPUTemp()
-			if err != nil {
+			if cpuMeasurement, err := GetCPUTemp(); err != nil {
 				log.Println(err)
 			} else {
-				err := db.InsertMeasurement(cpuMeasurement)
-				if err != nil {
+				measurements = append(measurements, cpuMeasurement)
+			}
+
+			for _, measurement := range measurements {
+				if err := db.InsertMeasurement(measurement); err != nil {
 					log.Println(err)
+				}
+				if isWarn(config.Monitoring, measurement) {
+					monitoring <- measurement
 				}
 			}
 		}
 	}
 }
 
-func GetTemperature() string {
-	var result []string
-
-	cpuMeasurement, err := getCPUTemp()
-	if err != nil {
-		log.Println(err)
-	} else {
-		result = append(result, cpuMeasurement.String())
+func isWarn(limits []db.Measurement, actual db.Measurement) bool {
+	for _, limit := range limits {
+		if limit.Unit == actual.Unit && limit.MeasureUnit == actual.MeasureUnit && limit.Value <= actual.Value {
+			return true
+		}
 	}
 
-	gpuMeasurement, err := getGPUTemp()
-	if err != nil {
-		log.Println(err)
-	} else {
-		result = append(result, gpuMeasurement.String())
-	}
-
-	return strings.Join(result, "\n")
-}
-
-func getGPUTemp() (db.Measurement, error) {
-	cmd := exec.Command("vcgencmd", "measure_temp")
-	var btsOut, btsErr bytes.Buffer
-	cmd.Stdout = &btsOut
-	cmd.Stderr = &btsErr
-	err := cmd.Run()
-	if err != nil {
-		return db.Measurement{}, fmt.Errorf("can't get gpu temp: %s: %w", btsErr.String(), err)
-	}
-
-	submatch := gpuRegexp.FindStringSubmatch(btsOut.String())
-
-	tempVal, err := strconv.ParseFloat(strings.TrimSpace(submatch[1]), 64)
-	if err != nil {
-		return db.Measurement{}, fmt.Errorf("can't parse gpu temp: %w", err)
-	}
-
-	gpuMeasurement := db.Measurement{
-		Unit:        GPU_UNIT,
-		Value:       tempVal,
-		MeasureUnit: submatch[2],
-		Timestamp:   time.Now(),
-	}
-
-	return gpuMeasurement, nil
-}
-
-func getCPUTemp() (db.Measurement, error) {
-	btsTemp, err := ioutil.ReadFile(cpuTempFilePath)
-	if err != nil {
-		return db.Measurement{}, fmt.Errorf("can't read %s: %w", cpuTempFilePath, err)
-	}
-
-	tempVal, err := strconv.ParseFloat(strings.TrimSpace(string(btsTemp)), 64)
-	if err != nil {
-		return db.Measurement{}, fmt.Errorf("can't parse cpu temp: %w", err)
-	}
-
-	cpuMeasurement := db.Measurement{
-		Unit:        CPU_UNIT,
-		Value:       tempVal / 1000,
-		MeasureUnit: "C",
-		Timestamp:   time.Now(),
-	}
-
-	return cpuMeasurement, nil
+	return false
 }

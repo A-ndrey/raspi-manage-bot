@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func Start(ctx context.Context, config configs.Config) (err error) {
+func Start(ctx context.Context, config configs.Config, monitoring <-chan db.Measurement) (err error) {
 	bot, err := tgbotapi.NewBotAPI(config.Token)
 	if err != nil {
 		return
@@ -35,6 +35,24 @@ func Start(ctx context.Context, config configs.Config) (err error) {
 			return
 		case update := <-updatesChan:
 			handleUpdate(bot, update, config)
+		case measurement := <-monitoring:
+			handleMonitoring(bot, measurement)
+		}
+	}
+}
+
+func handleMonitoring(bot *tgbotapi.BotAPI, measurement db.Measurement) {
+	owners, err := db.GetOwners()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for _, chatID := range owners {
+		msg := tgbotapi.NewMessage(chatID, "WARNING\n"+measurement.String())
+		_, err := bot.Send(msg)
+		if err != nil {
+			log.Println(err)
 		}
 	}
 }
