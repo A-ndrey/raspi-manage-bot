@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
-	"github.com/A-ndrey/raspi-manage-bot/board"
-	"github.com/A-ndrey/raspi-manage-bot/bot"
-	"github.com/A-ndrey/raspi-manage-bot/configs"
-	"github.com/A-ndrey/raspi-manage-bot/db"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/A-ndrey/raspi-manage-bot/bot"
+	"github.com/A-ndrey/raspi-manage-bot/configs"
+	"github.com/A-ndrey/raspi-manage-bot/db"
+	"github.com/A-ndrey/raspi-manage-bot/stats"
 )
 
 func main() {
@@ -34,7 +35,13 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		board.StartMeasuring(ctx, config, monitoring)
+		stats.StartMeasuring(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		stats.StartAnalyzing(ctx, config, monitoring)
 	}()
 
 	wg.Add(1)

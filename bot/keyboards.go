@@ -13,6 +13,7 @@ const (
 	Temperature = "Temperature"
 	Board       = "Board"
 	Air         = "Air"
+	AirQuality  = "Air quality"
 	Empty       = ""
 
 	BoardTempCallback = "BoardTempCallback"
@@ -27,8 +28,9 @@ const (
 var cameraBtn = tgbotapi.NewKeyboardButton(Camera)
 var tempBtn = tgbotapi.NewKeyboardButton(Temperature)
 var rebootBtn = tgbotapi.NewKeyboardButton(Reboot)
+var airQualityBtn = tgbotapi.NewKeyboardButton(AirQuality)
 
-var firstRowOwnerKB = tgbotapi.NewKeyboardButtonRow(cameraBtn, tempBtn, rebootBtn)
+var firstRowOwnerKB = tgbotapi.NewKeyboardButtonRow(cameraBtn, tempBtn, airQualityBtn)
 
 var ownerKeyboard = tgbotapi.NewReplyKeyboard(firstRowOwnerKB)
 

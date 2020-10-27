@@ -117,6 +117,31 @@ func InsertMeasurement(measurement Measurement) error {
 	return nil
 }
 
+func GetMeasurementsInTimeInterval(startTime, endTime time.Time) ([]Measurement, error) {
+	rows, err := dbase.Query(
+		"select unit, value, measure_unit, timestamp from stats where timestamp >= $1 and timestamp <= $2",
+		startTime,
+		endTime,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("can't select measurements: %w", err)
+	}
+	defer rows.Close()
+
+	var result []Measurement
+	for rows.Next() {
+		var measurement Measurement
+		err = rows.Scan(&measurement.Unit, &measurement.Value, &measurement.MeasureUnit, &measurement.Timestamp)
+		if err != nil {
+			continue
+		}
+
+		result = append(result, measurement)
+	}
+
+	return result, err
+}
+
 func GetOwners() ([]int64, error) {
 	rows, err := dbase.Query("select chat_id from auth where role = $1 and valid_until >= $2", ROLE_OWNER, time.Now())
 	if err != nil {

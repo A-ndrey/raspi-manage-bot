@@ -6,8 +6,11 @@ import (
 	"github.com/A-ndrey/raspi-manage-bot/camera"
 	"github.com/A-ndrey/raspi-manage-bot/configs"
 	"github.com/A-ndrey/raspi-manage-bot/db"
+	"github.com/A-ndrey/raspi-manage-bot/sensors"
+	"github.com/A-ndrey/raspi-manage-bot/stats"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -89,6 +92,8 @@ func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, config confi
 		if err != nil {
 			log.Println(err)
 		}
+	case AirQuality:
+		handleAirQualityButton(bot, chatID)
 	case Reboot:
 		handleRebootButton(bot, chatID)
 	}
@@ -150,7 +155,24 @@ func handleInternalTempQuery(bot *tgbotapi.BotAPI, chatID int64) {
 		return
 	}
 
-	temp := board.GetTemperature()
+	var result []string
+
+	cpuMeasurement, err := stats.GetMeasurementByUnit(board.CpuUnit)
+	if err != nil {
+		log.Println(err)
+	} else {
+		result = append(result, cpuMeasurement.String())
+	}
+
+	gpuMeasurement, err := stats.GetMeasurementByUnit(board.GpuUnit)
+	if err != nil {
+		log.Println(err)
+	} else {
+		result = append(result, gpuMeasurement.String())
+	}
+
+	temp := strings.Join(result, "\n")
+
 	var msg tgbotapi.MessageConfig
 	if temp == "" {
 		msg = tgbotapi.NewMessage(chatID, "No data about internal temperature")
@@ -158,7 +180,44 @@ func handleInternalTempQuery(bot *tgbotapi.BotAPI, chatID int64) {
 		msg = tgbotapi.NewMessage(chatID, temp)
 	}
 
-	_, err := bot.Send(msg)
+	_, err = bot.Send(msg)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func handleAirQualityButton(bot *tgbotapi.BotAPI, chatID int64) {
+	if !isAuthorized(chatID, db.ROLE_OWNER) {
+		sendPermissionDeniedMessage(bot, chatID)
+		return
+	}
+
+	var result []string
+
+	co2Measurement, err := stats.GetMeasurementByUnit(sensors.CO2Unit)
+	if err != nil {
+		log.Println(err)
+	} else {
+		result = append(result, co2Measurement.String())
+	}
+
+	tvocMeasurement, err := stats.GetMeasurementByUnit(sensors.TVOCUnit)
+	if err != nil {
+		log.Println(err)
+	} else {
+		result = append(result, tvocMeasurement.String())
+	}
+
+	airQualityInfo := strings.Join(result, "\n")
+
+	var msg tgbotapi.MessageConfig
+	if airQualityInfo == "" {
+		msg = tgbotapi.NewMessage(chatID, "No data about air quality")
+	} else {
+		msg = tgbotapi.NewMessage(chatID, airQualityInfo)
+	}
+
+	_, err = bot.Send(msg)
 	if err != nil {
 		log.Println(err)
 	}

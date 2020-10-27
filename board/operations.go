@@ -5,12 +5,21 @@ import (
 	"fmt"
 	"github.com/A-ndrey/raspi-manage-bot/db"
 	"io/ioutil"
-	"log"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+const (
+	cpuTempFilePath = "/sys/class/thermal/thermal_zone0/temp"
+
+	GpuUnit = "GPU"
+	CpuUnit = "CPU"
+)
+
+var gpuRegexp = regexp.MustCompile(`temp=(\d+\.\d+)'(.+)`)
 
 func Reboot() error {
 	cmd := exec.Command("/bin/bash", "-c", "sudo reboot")
@@ -22,26 +31,6 @@ func Reboot() error {
 	}
 
 	return nil
-}
-
-func GetTemperature() string {
-	var result []string
-
-	cpuMeasurement, err := GetCPUTemp()
-	if err != nil {
-		log.Println(err)
-	} else {
-		result = append(result, cpuMeasurement.String())
-	}
-
-	gpuMeasurement, err := GetGPUTemp()
-	if err != nil {
-		log.Println(err)
-	} else {
-		result = append(result, gpuMeasurement.String())
-	}
-
-	return strings.Join(result, "\n")
 }
 
 func GetGPUTemp() (db.Measurement, error) {
@@ -62,7 +51,7 @@ func GetGPUTemp() (db.Measurement, error) {
 	}
 
 	gpuMeasurement := db.Measurement{
-		Unit:        GPU_UNIT,
+		Unit:        GpuUnit,
 		Value:       tempVal,
 		MeasureUnit: submatch[2],
 		Timestamp:   time.Now(),
@@ -83,7 +72,7 @@ func GetCPUTemp() (db.Measurement, error) {
 	}
 
 	cpuMeasurement := db.Measurement{
-		Unit:        CPU_UNIT,
+		Unit:        CpuUnit,
 		Value:       tempVal / 1000,
 		MeasureUnit: "C",
 		Timestamp:   time.Now(),
